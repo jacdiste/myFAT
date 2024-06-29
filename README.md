@@ -1,2 +1,2 @@
 # myFAT
-File system FAT project.
+FAT File system project.
