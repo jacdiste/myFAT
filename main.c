@@ -19,6 +19,18 @@ int main(int argc, char *argv[]) {
     memset(fs->data, '\0', BLOCK_SIZE*BLOCKS_NUMBER);
     close(fd);
 
+    DirEntry* root = (DirEntry*) malloc(sizeof(DirEntry));
+    root->name = "root";
+    root->startBlock = -1;
+    root->size = 0;
+    root->parentDirBlock = -1;
+    root->isDir = 1;
+    root->numFiles = 0;
+    root->numDir = 0;
+    root->entries = (DirEntry**)malloc(MAX_ENTRIES*sizeof(DirEntry**));
+
+    fs->currentDir = root;
+
     /* STAMPO DISK E DATA */
     //int i = 0;
     //for(i; i < BLOCKS_NUMBER; i++) {
@@ -34,6 +46,14 @@ int main(int argc, char *argv[]) {
 
     //printf("\n%d", j);
 
+
+    FileHandle* fh1 = createFile(fs, "myFirstFile.txt");
+
+    // ATTENZIONE: DUE BLOCCHI DA LIBERARE QUANDO FACCIO LA createFile (DA LIBERARE NELLA eraseFile)
+    //free(fh1);
+    //free(file);
+    free(fs->currentDir->entries);
+    free(fs->currentDir);
     munmap(fs->data, BLOCKS_NUMBER*BLOCK_SIZE);
     free(fs);
 }
