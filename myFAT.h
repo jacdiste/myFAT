@@ -2,17 +2,22 @@
 #define MYFAT_H
 
 #define MAX_NAME_LENGHT 256
-#define MAX_ENTRIES 100
+//#define MAX_ENTRIES 64
 #define BLOCKS_NUMBER 1024
 #define BLOCK_SIZE 4096
 #define FREE -1
+#define EOF -2
 
 typedef struct{
-    char name[MAX_NAME_LENGHT];
+    char* name;
     int startBlock;
     int size;
-    int isDir;
     int parentDirBlock;
+
+    int isDir;
+    int numFiles;
+    int numDir;
+    DirEntry** entries;
 } DirEntry;
 
 typedef struct{
@@ -21,19 +26,22 @@ typedef struct{
 
 typedef struct{
     int disk[BLOCKS_NUMBER];
-    DirEntry entries[MAX_ENTRIES];
+    DirEntry* currentDir;
     char* data;
 } FATFileSystem;
 
 
-void createFile(FATFileSystem* fs, const char* filename);
-void eraseFile(FATFileSystem* fs, const char* filename);
-void writeFile(FATFileSystem* fs, const char* filename, const char* data);
-void readFile(FATFileSystem* fs, const char* filename, char* data, int size);
-void seekFile(FATFileSystem* fs, const char* filename, int position);
-void createDir(FATFileSystem* fs, const char* dirname);
-void eraseDir(FATFileSystem* fs, const char* dirname);
-void changeDir(FATFileSystem* fs, const char* dirname);
+//int countFiles(DirEntry* dir);
+//int countDirectories(DirEntry* dir);
+
+FileHandle* createFile(FATFileSystem* fs, char *filename);
+void eraseFile(FATFileSystem* fs, FileHandle* fh);
+void writeFile(FATFileSystem* fs, FileHandle *fh, const void *buf, int size);
+void readFile(FATFileSystem* fs, FileHandle *fh, void *buf, int size);
+void seekFile(FATFileSystem* fs, FileHandle *fh, int pos);
+void createDir(FATFileSystem* fs, const char *dirname);
+void eraseDir(FATFileSystem* fs, const char *dirname);
+void changeDir(FATFileSystem* fs, const char *dirname);
 void listDir(FATFileSystem* fs);
 
 #endif
