@@ -5,7 +5,8 @@
 #define MAX_ENTRIES 64 //SERVE??
 #define BLOCKS_NUMBER 1024
 #define BLOCK_SIZE 4096
-#define FREE 0
+#define FREE -1
+#define EF -2
 
 typedef struct DirEntry{
     char* name;
@@ -20,27 +21,33 @@ typedef struct DirEntry{
 } DirEntry;
 
 typedef struct{
+    DirEntry* currentDir;
     int pos;
 }FileHandle;
 
+
 typedef struct{
     int disk[BLOCKS_NUMBER];
-    DirEntry* currentDir;
     char* data;
-} FATFileSystem;
+} FAT;
+
+typedef struct{
+    FAT* fat;
+    char* data;
+} FileSystem;
 
 
 //int countFiles(DirEntry* dir);
 //int countDirectories(DirEntry* dir);
 
-FileHandle* createFile(FATFileSystem* fs, char *filename);
-void eraseFile(FATFileSystem* fs, FileHandle* fh);
-void writeFile(FATFileSystem* fs, FileHandle *fh, const void *buf, int size);
-void readFile(FATFileSystem* fs, FileHandle *fh, void *buf, int size);
-void seekFile(FATFileSystem* fs, FileHandle *fh, int pos);
-void createDir(FATFileSystem* fs, const char *dirname);
-void eraseDir(FATFileSystem* fs, const char *dirname);
-void changeDir(FATFileSystem* fs, const char *dirname);
-void listDir(FATFileSystem* fs);
+FileHandle* createFile(FileSystem* fs, char *filename);
+void eraseFile(FileSystem* fs, FileHandle* fh);
+void writeFile(FileSystem* fs, FileHandle *fh, const void *buf, int size);
+void readFile(FileSystem* fs, FileHandle *fh, void *buf, int size);
+void seekFile(FileSystem* fs, FileHandle *fh, int pos);
+void createDir(FileSystem* fs, const char *dirname);
+void eraseDir(FileSystem* fs, const char *dirname);
+void changeDir(FileSystem* fs, const char *dirname);
+void listDir(FileSystem* fs);
 
 #endif

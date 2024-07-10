@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
     root->isDir = 1;
     root->numFiles = 0;
     root->numDir = 0;
-    root->entries = (DirEntry**)malloc(MAX_ENTRIES*sizeof(DirEntry**));
+    root->entries = (DirEntry**)realloc(NULL, sizeof(DirEntry**));
 
     fs->currentDir = root;
 
@@ -45,7 +45,6 @@ int main(int argc, char *argv[]) {
     //}
 
     //printf("\n%d", j);
-
 
     FileHandle* fh1 = createFile(fs, "myFirstFile.txt");
 

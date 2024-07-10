@@ -24,7 +24,7 @@ FileHandle* createFile(FATFileSystem* fs, char* filename){
     for(int i = 0; i<BLOCKS_NUMBER; i++){
         if(fs->disk[i] == FREE){
             found = i;
-            fs->disk[found] = EOF;
+            fs->disk[found] = EF;
             break;
         }
     }
@@ -49,4 +49,17 @@ FileHandle* createFile(FATFileSystem* fs, char* filename){
     fh->pos = 0;
 
     return fh;
+}
+
+void writeFile(FATFileSystem* fs, FileHandle *fh, const void *buf, int size){
+    if(strcmp(fs->currentDir->name,fh->currentDir->name) != 0){
+        printf("Error: The file is not in this directory, use 'changeDir' to navigate.\n");
+        return;
+    }
+
+    
+}
+
+void eraseFile(FATFileSystem* fs, FileHandle* fh){
+
 }
