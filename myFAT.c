@@ -4,11 +4,55 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <fcntl.h>
 
 #include "myFAT.h"
 
-FileHandle* createFile(FATFileSystem* fs, char* filename){
+
+FileSystem* loadFS(const char* name){
+    FileSystem* fs = (FileSystem*)malloc(sizeof(FileSystem));
+    
+    int fd = open(name, O_RDWR | O_CREAT, 0666);
+
+    if(fd == -1){
+        perror("Error opening file for writing");
+        exit(EXIT_FAILURE);
+    }
+
+    FATFileSystem* FATfs = mmap(NULL, sizeof(FATFileSystem), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    fs->FATfs = FATfs;
+
+    int used = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+
+    if(!used){
+        memset(FATfs->FAT, FREE, sizeof(FATfs->FAT));
+        memset(FATfs->data, 0, sizeof(FATfs->data));
+
+        DirEntry* root = (DirEntry*)(&FATfs->data[0]);
+        strcpy(root->name, "/");
+        root->startBlock = 0;
+        root->size = 0;
+        root->parentDirBlock = -1;
+        root->isDir = 1;
+        root->numFiles = 0;
+        root->numDir = 0;
+        memset(root->entries, FREE, sizeof(root->entries));
+
+        fs->currentDir = root;
+        FATfs->FAT[0] = EF;
+    }
+
+    else{
+        fs->currentDir = (DirEntry*)(&FATfs->data[0]);
+    }
+
+    close(fd);
+    return fs;
+}
+
+/*FileHandle* createFile(FileSystem* fs, char* filename){
 
     DirEntry* currentDir = fs->currentDir;
 
@@ -49,17 +93,4 @@ FileHandle* createFile(FATFileSystem* fs, char* filename){
     fh->pos = 0;
 
     return fh;
-}
-
-void writeFile(FATFileSystem* fs, FileHandle *fh, const void *buf, int size){
-    if(strcmp(fs->currentDir->name,fh->currentDir->name) != 0){
-        printf("Error: The file is not in this directory, use 'changeDir' to navigate.\n");
-        return;
-    }
-
-    
-}
-
-void eraseFile(FATFileSystem* fs, FileHandle* fh){
-
-}
+} */

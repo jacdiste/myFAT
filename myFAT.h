@@ -2,14 +2,14 @@
 #define MYFAT_H
 
 #define MAX_NAME_LENGHT 256
-#define MAX_ENTRIES 64 //SERVE??
+#define MAX_ENTRIES 64
 #define BLOCKS_NUMBER 1024
-#define BLOCK_SIZE 4096
+#define BLOCK_SIZE 64
 #define FREE -1
 #define EF -2
 
 typedef struct DirEntry{
-    char* name;
+    char name[MAX_NAME_LENGHT];
     int startBlock;
     int size;
     int parentDirBlock;
@@ -17,28 +17,31 @@ typedef struct DirEntry{
     int isDir;
     int numFiles;
     int numDir;
-    struct DirEntry** entries;
+    int entries[MAX_ENTRIES];
 } DirEntry;
 
 typedef struct{
     DirEntry* currentDir;
     int pos;
-}FileHandle;
-
-
-typedef struct{
-    int disk[BLOCKS_NUMBER];
-    char* data;
-} FAT;
+} FileHandle;
 
 typedef struct{
-    FAT* fat;
-    char* data;
+    int FAT[BLOCKS_NUMBER];
+    char data[BLOCK_SIZE * BLOCKS_NUMBER];
+} FATFileSystem;
+
+typedef struct{
+    FATFileSystem* FATfs;
+    DirEntry* currentDir;
 } FileSystem;
 
 
 //int countFiles(DirEntry* dir);
 //int countDirectories(DirEntry* dir);
+
+
+FileSystem* loadFS(const char* name);
+void unloadFS(FileSystem* fs);
 
 FileHandle* createFile(FileSystem* fs, char *filename);
 void eraseFile(FileSystem* fs, FileHandle* fh);
