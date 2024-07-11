@@ -52,6 +52,19 @@ FileSystem* loadFS(const char* name){
     return fs;
 }
 
+void unloadFS(FileSystem* fs){
+    if(fs==NULL) return;
+
+    if(fs->FATfs != NULL){
+        if(munmap(fs->FATfs, sizeof(FATFileSystem)) == -1){
+            perror("Error unmapping FAT File System");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    free(fs);
+}
+
 /*FileHandle* createFile(FileSystem* fs, char* filename){
 
     DirEntry* currentDir = fs->currentDir;

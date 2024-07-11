@@ -12,7 +12,8 @@
 int main(int argc, char *argv[]) {
 
     FileSystem* fs = loadFS("myFATfs");
-    free(fs);
+    
+    unloadFS(fs);
 
     return 0;
 }
