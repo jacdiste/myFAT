@@ -36,15 +36,15 @@ typedef struct{
 } FileSystem;
 
 
-//int countFiles(DirEntry* dir);
-//int countDirectories(DirEntry* dir);
-
-
+//Helper functions
 FileSystem* loadFS(const char* name);
 void unloadFS(FileSystem* fs);
+int findFree(FATFileSystem* FATfs);
+FileHandle* openFile(FileSystem* fs, const char* name);
 
-FileHandle* createFile(FileSystem* fs, char *filename);
-void eraseFile(FileSystem* fs, FileHandle* fh);
+// Requested functions
+void createFile(FileSystem* fs, const char* name);
+void eraseFile(FileSystem* fs, const char* name);
 void writeFile(FileSystem* fs, FileHandle *fh, const void *buf, int size);
 void readFile(FileSystem* fs, FileHandle *fh, void *buf, int size);
 void seekFile(FileSystem* fs, FileHandle *fh, int pos);
@@ -52,5 +52,6 @@ void createDir(FileSystem* fs, const char *dirname);
 void eraseDir(FileSystem* fs, const char *dirname);
 void changeDir(FileSystem* fs, const char *dirname);
 void listDir(FileSystem* fs);
+
 
 #endif

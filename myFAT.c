@@ -23,12 +23,24 @@ FileSystem* loadFS(const char* name){
     FATFileSystem* FATfs = mmap(NULL, sizeof(FATFileSystem), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     fs->FATfs = FATfs;
 
+    off_t fsSize = lseek(fd, 0, SEEK_END);
+    if(fsSize < sizeof(FATFileSystem)){
+        if(ftruncate(fd, sizeof(FATFileSystem)) == -1){
+            perror("Error resizing");
+            close(fd);
+            free(fs);
+            exit(EXIT_FAILURE);
+        }
+        fsSize = sizeof(FATFileSystem);
+    }
+    lseek(fd, 0, SEEK_SET);
+
     int used = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
 
-    if(!used){
-        memset(FATfs->FAT, FREE, sizeof(FATfs->FAT));
-        memset(FATfs->data, 0, sizeof(FATfs->data));
+
+        memset(FATfs->FAT, FREE , sizeof(FATfs->FAT));
+        memset(FATfs->data, '\0', sizeof(FATfs->data));
 
         DirEntry* root = (DirEntry*)(&FATfs->data[0]);
         strcpy(root->name, "/");
@@ -38,15 +50,13 @@ FileSystem* loadFS(const char* name){
         root->isDir = 1;
         root->numFiles = 0;
         root->numDir = 0;
+        // forse troppo dispendiosa? ->
         memset(root->entries, FREE, sizeof(root->entries));
 
+        printf("%ld\n", sizeof(root->entries));
         fs->currentDir = root;
         FATfs->FAT[0] = EF;
-    }
-
-    else{
-        fs->currentDir = (DirEntry*)(&FATfs->data[0]);
-    }
++
 
     close(fd);
     return fs;
@@ -65,45 +75,73 @@ void unloadFS(FileSystem* fs){
     free(fs);
 }
 
-/*FileHandle* createFile(FileSystem* fs, char* filename){
-
-    DirEntry* currentDir = fs->currentDir;
-
-    for(int i=0; i<currentDir->numFiles; i++){
-        if(strcmp(currentDir->entries[i]->name, filename) == 0){
-            printf("Error: File already exists\n");
-            return NULL;
+int findFree(FATFileSystem* FATfs){
+    for(int i = 0; i < BLOCKS_NUMBER; i++){
+        if(FATfs->FAT[i] == FREE){
+            return i;
         }
     }
+    return -1;
+}
 
-    int found = -1;
+void createFile(FileSystem* fs, const char* name){
+    DirEntry* parentDir = fs->currentDir;
 
-    for(int i = 0; i<BLOCKS_NUMBER; i++){
-        if(fs->disk[i] == FREE){
-            found = i;
-            fs->disk[found] = EF;
+    if(parentDir->numFiles + parentDir->numDir >= MAX_ENTRIES){
+        printf("Parent directory is full\n");
+        return;
+    }
+
+    int freeBlock = findFree(fs->FATfs);
+    if(freeBlock == -1){
+        printf("No free blocks\n");
+        return;
+    }
+
+    DirEntry* newFile = (DirEntry*)(&fs->FATfs->data[freeBlock * BLOCK_SIZE]);
+    strcpy(newFile->name, name);
+    newFile->startBlock = freeBlock;
+    newFile->size = 0;
+    newFile->parentDirBlock = parentDir->startBlock;
+    newFile->isDir = 0;
+    newFile->numFiles = 0;
+    newFile->numDir = 0;
+    //spreco di memoria? ->
+    //memset(newFile->entries, FREE, sizeof(newFile->entries));
+
+    for(int i = 0; i < MAX_ENTRIES; i++){
+        if(fs->currentDir->entries[i] == FREE){
+            fs->currentDir->entries[i] = freeBlock;
             break;
         }
     }
 
-    if(found == -1){
-        printf("Error: Disk is full\n");
-        return NULL;
-    }
-
-    DirEntry* file = (DirEntry*)malloc(sizeof(DirEntry));
-    file->name = filename;
-    file->startBlock = found;
-    file->size = 0;
-    file->parentDirBlock = currentDir->startBlock;
-    file->isDir = 0;
-    
-    fs->currentDir->size++;
     fs->currentDir->numFiles++;
-    fs->currentDir->entries[fs->currentDir->numFiles-1] = file;
+    fs->FATfs->FAT[freeBlock] = EF;
+}
 
-    FileHandle* fh = (FileHandle*)malloc(sizeof(FileHandle));
-    fh->pos = 0;
+void eraseFile(FileSystem* fs, const char* name){
+    DirEntry* parentDir = fs->currentDir;
 
-    return fh;
-} */
+    for(int i = 0; i < MAX_ENTRIES; i++){
+        if(parentDir->entries[i] != FREE){
+            DirEntry* entry = (DirEntry*)(&fs->FATfs->data[parentDir->entries[i] * BLOCK_SIZE]);
+            if(strcmp(entry->name, name) == 0 && !entry->isDir){
+                int currentBlock = entry->startBlock;
+                while(currentBlock != EF){
+                    int nextBlock = fs->FATfs->FAT[currentBlock];
+                    fs->FATfs->FAT[currentBlock] = FREE;
+                    memset(&fs->FATfs->data[currentBlock * BLOCK_SIZE], '\0', BLOCK_SIZE);
+                    currentBlock = nextBlock;
+                }
+                fs->currentDir->entries[i] = FREE;
+                fs->currentDir->numFiles--;
+                printf("File %s erased. \n", name);
+                return;
+            }
+        }
+    }
+    printf("File %s not found. \n", name);
+}
+
+
