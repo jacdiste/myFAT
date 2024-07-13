@@ -144,4 +144,25 @@ void eraseFile(FileSystem* fs, const char* name){
     printf("File %s not found. \n", name);
 }
 
+FileHandle* openFile(FileSystem* fs, const char* name){
+    DirEntry* parentDir = fs->currentDir;
 
+    for(int i = 0; i < MAX_ENTRIES; i++){
+        if(parentDir->entries[i]!= FREE){
+            DirEntry* entry = (DirEntry*)(&fs->FATfs->data[parentDir->entries[i] * BLOCK_SIZE]);
+            if(strcmp(entry->name, name) == 0 && !entry->isDir){
+                FileHandle* fh = (FileHandle*)malloc(sizeof(FileHandle));
+                fh->currentDir = entry;
+                fh->pos = 0;
+                return fh;
+            }
+        }
+    }
+
+    printf("File %s not found. \n", name);
+    return NULL;
+}
+
+void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
+    
+}
