@@ -152,17 +152,80 @@ FileHandle* openFile(FileSystem* fs, const char* name){
             DirEntry* entry = (DirEntry*)(&fs->FATfs->data[parentDir->entries[i] * BLOCK_SIZE]);
             if(strcmp(entry->name, name) == 0 && !entry->isDir){
                 FileHandle* fh = (FileHandle*)malloc(sizeof(FileHandle));
-                fh->currentDir = entry;
+                fh->currentDir = parentDir;
+                fh->startBlock = entry->startBlock;
                 fh->pos = 0;
                 return fh;
             }
         }
     }
 
-    printf("File %s not found. \n", name);
+    printf("File %s not found. Try changing Directory. \n", name);
     return NULL;
 }
 
+void closeFile(FileSystem* fs, FileHandle* fh){
+    free(fh);
+}
+
 void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
-    
+
+    if(fh==NULL){
+        printf("Invalid file. \n");
+        return;
+    }
+
+    int currentBlock = fh->startBlock;
+    int fileOffset = fh->pos % BLOCK_SIZE;
+    int bytesToWrite = len;
+    int bufOffset = 0;
+
+    while(bytesToWrite > 0){
+        if(fileOffset = 0){
+            if(fs->FATfs->FAT[currentBlock] == EF){
+                int newBlock = findFreeBlock(fs->FATfs);
+                if(newBlock == -1){
+                    printf("No more free blocks. \n");
+                    return;
+                }
+
+                fs->FATfs->FAT[currentBlock] = newBlock;
+                fs->FATfs->FAT[newBlock] = EF;
+                currentBlock = newBlock;
+            }
+
+            else{
+                currentBlock = fs->FATfs->FAT[currentBlock];
+            }
+        }
+
+        int leftBytes = BLOCK_SIZE - fileOffset;
+        if(leftBytes > bytesToWrite){
+            leftBytes = bytesToWrite;
+        }
+
+        memcpy(&fs->FATfs->data[currentBlock * BLOCK_SIZE + fileOffset], &buf[bufOffset], leftBytes);
+
+        bytesToWrite -= leftBytes;
+        bufOffset += leftBytes;
+        fileOffset = (fileOffset + leftBytes) % BLOCK_SIZE;
+
+        if(fileOffset==0 && fs->FATfs->FAT[currentBlock]==EF){
+            int newBlock = findFreeBlock(fs->FATfs);
+            if(newBlock == -1){
+                printf("No more free blocks, only %d bytes have been written! \n", len-bytesToWrite);
+                return;
+            }
+
+            fs->FATfs->FAT[currentBlock] = newBlock;
+            fs->FATfs->FAT[newBlock] = EF;
+            currentBlock = newBlock;
+        }
+    }
+
+    fh->pos += len;
+    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->startBlock * BLOCK_SIZE]);
+    if (fh->pos > file->size) {
+        file->size = fh->pos;
+    }
 }
