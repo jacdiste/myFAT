@@ -23,7 +23,7 @@ FileSystem* loadFS(const char* name){
     FATFileSystem* FATfs = mmap(NULL, sizeof(FATFileSystem), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     fs->FATfs = FATfs;
 
-    off_t fsSize = lseek(fd, 0, SEEK_END);
+    int fsSize = lseek(fd, 0, SEEK_END);
     if(fsSize < sizeof(FATFileSystem)){
         if(ftruncate(fd, sizeof(FATFileSystem)) == -1){
             perror("Error resizing");
@@ -53,7 +53,6 @@ FileSystem* loadFS(const char* name){
         // forse troppo dispendiosa? ->
         memset(root->entries, FREE, sizeof(root->entries));
 
-        printf("%ld\n", sizeof(root->entries));
         fs->currentDir = root;
         FATfs->FAT[0] = EF;
 +
@@ -181,9 +180,9 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
     int bufOffset = 0;
 
     while(bytesToWrite > 0){
-        if(fileOffset = 0){
+        if(fileOffset == 0){
             if(fs->FATfs->FAT[currentBlock] == EF){
-                int newBlock = findFreeBlock(fs->FATfs);
+                int newBlock = findFree(fs->FATfs);
                 if(newBlock == -1){
                     printf("No more free blocks. \n");
                     return;
@@ -199,21 +198,22 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
             }
         }
 
-        int leftBytes = BLOCK_SIZE - fileOffset;
-        if(leftBytes > bytesToWrite){
-            leftBytes = bytesToWrite;
+        int inBlockWritableBytes = BLOCK_SIZE - fileOffset;
+        if(inBlockWritableBytes > bytesToWrite){
+            inBlockWritableBytes = bytesToWrite;
         }
 
-        memcpy(&fs->FATfs->data[currentBlock * BLOCK_SIZE + fileOffset], &buf[bufOffset], leftBytes);
+        memcpy(&fs->FATfs->data[currentBlock * BLOCK_SIZE + fileOffset], &buf[bufOffset], inBlockWritableBytes);
 
-        bytesToWrite -= leftBytes;
-        bufOffset += leftBytes;
-        fileOffset = (fileOffset + leftBytes) % BLOCK_SIZE;
+        bytesToWrite -= inBlockWritableBytes;
+        bufOffset += inBlockWritableBytes;
+        fileOffset = (fileOffset + inBlockWritableBytes) % BLOCK_SIZE;
 
         if(fileOffset==0 && fs->FATfs->FAT[currentBlock]==EF){
-            int newBlock = findFreeBlock(fs->FATfs);
+            int newBlock = findFree(fs->FATfs);
             if(newBlock == -1){
                 printf("No more free blocks, only %d bytes have been written! \n", len-bytesToWrite);
+                fh->pos += (len - bytesToWrite);
                 return;
             }
 
@@ -226,6 +226,12 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
     fh->pos += len;
     DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->startBlock * BLOCK_SIZE]);
     if (fh->pos > file->size) {
+        int sizeDiff = fh->pos - file->size;
+
         file->size = fh->pos;
+
+        DirEntry* parentDir = (DirEntry*)(&fs->FATfs->data[file->parentDirBlock * BLOCK_SIZE]);
+        parentDir->size += sizeDiff;
     }
 }
+
