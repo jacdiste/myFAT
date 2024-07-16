@@ -48,7 +48,7 @@ void closeFile(FileSystem* fs, FileHandle* fh);
 void createFile(FileSystem* fs, const char* name);
 void eraseFile(FileSystem* fs, const char* name);
 void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len);
-void readFile(FileSystem* fs, FileHandle *fh, void *buf, int size);
+void readFile(FileSystem* fs, FileHandle *fh, char *buf, int len);
 void seekFile(FileSystem* fs, FileHandle *fh, int pos);
 void createDir(FileSystem* fs, const char *dirname);
 void eraseDir(FileSystem* fs, const char *dirname);

@@ -223,6 +223,7 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
         }
     }
 
+    //controllare se le size sono corrette!!
     fh->pos += len;
     DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->startBlock * BLOCK_SIZE]);
     if (fh->pos > file->size) {
@@ -235,3 +236,39 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
     }
 }
 
+void readFile(FileSystem* fs, FileHandle *fh, char *buf, int len){
+
+    if(fh==NULL){
+        printf("Invalid file. \n");
+        return;
+    }
+
+    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->startBlock * BLOCK_SIZE]);
+    int currentBlock = fh->startBlock;
+    int fileOffset = fh->pos % BLOCK_SIZE;
+    int bytesToRead = len;
+    int bufOffset = 0;
+
+    while(bytesToRead > 0 && fh->pos < file->size){
+        int inBlockReadableBytes = BLOCK_SIZE - fileOffset;
+
+        if(inBlockReadableBytes > bytesToRead){
+            inBlockReadableBytes = bytesToRead;
+        }
+
+        if(inBlockReadableBytes > file->size - fh->pos){
+            inBlockReadableBytes = file->size - fh->pos;
+        }
+
+        memcpy(&buf[bufOffset], &fs->FATfs->data[currentBlock * BLOCK_SIZE + fileOffset], inBlockReadableBytes);
+
+        bytesToRead -= inBlockReadableBytes;
+        bufOffset += inBlockReadableBytes;
+        fh->pos += inBlockReadableBytes;
+        fileOffset = (fileOffset + inBlockReadableBytes) % BLOCK_SIZE;
+
+        if(fileOffset==0){
+            currentBlock = fs->FATfs->FAT[currentBlock];
+        }
+    }
+}
