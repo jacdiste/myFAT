@@ -87,13 +87,13 @@ void createFile(FileSystem* fs, const char* name){
     DirEntry* parentDir = fs->currentDir;
 
     if(parentDir->numFiles + parentDir->numDir >= MAX_ENTRIES){
-        printf("Parent directory is full\n");
+        printf("Error: Parent directory is full\n");
         return;
     }
 
     int freeBlock = findFree(fs->FATfs);
     if(freeBlock == -1){
-        printf("No free blocks\n");
+        printf("Error: No free blocks\n");
         return;
     }
 
@@ -108,15 +108,10 @@ void createFile(FileSystem* fs, const char* name){
     //spreco di memoria? ->
     //memset(newFile->entries, FREE, sizeof(newFile->entries));
 
-    for(int i = 0; i < MAX_ENTRIES; i++){
-        if(fs->currentDir->entries[i] == FREE){
-            fs->currentDir->entries[i] = freeBlock;
-            break;
-        }
-    }
-
     fs->currentDir->numFiles++;
     fs->FATfs->FAT[freeBlock] = EF;
+
+    printf("File %s created. \n", name);
 }
 
 void eraseFile(FileSystem* fs, const char* name){
@@ -140,7 +135,7 @@ void eraseFile(FileSystem* fs, const char* name){
             }
         }
     }
-    printf("File %s not found. \n", name);
+    printf("Error: File %s not found. \n", name);
 }
 
 FileHandle* openFile(FileSystem* fs, const char* name){
@@ -159,7 +154,7 @@ FileHandle* openFile(FileSystem* fs, const char* name){
         }
     }
 
-    printf("File %s not found. Try changing Directory. \n", name);
+    printf("Error: File %s not found. Try changing Directory. \n", name);
     return NULL;
 }
 
@@ -170,7 +165,7 @@ void closeFile(FileSystem* fs, FileHandle* fh){
 void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
 
     if(fh==NULL){
-        printf("Invalid file. \n");
+        printf("Error: Invalid file. \n");
         return;
     }
 
@@ -239,7 +234,7 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
 void readFile(FileSystem* fs, FileHandle *fh, char *buf, int len){
 
     if(fh==NULL){
-        printf("Invalid file. \n");
+        printf("Error: Invalid file. \n");
         return;
     }
 
@@ -272,3 +267,65 @@ void readFile(FileSystem* fs, FileHandle *fh, char *buf, int len){
         }
     }
 }
+
+void seekFile(FileSystem* fs, FileHandle *fh, int newPos){
+
+    if(fh==NULL){
+        printf("Error: Invalid file. \n");
+        return;
+    }
+
+    if(newPos > fh->pos || newPos < 0){
+        printf("Error: Invalid seek position. \n");
+        return;
+    }
+
+    int indexBlock = fh->startBlock;
+
+    int pos = newPos;
+
+    while(pos>=BLOCK_SIZE){
+        indexBlock = fs->FATfs->FAT[indexBlock];
+        if(indexBlock==EF){
+            printf("Error: Seek position out of file bounds. \n");
+            return;
+        }
+
+        pos -= BLOCK_SIZE;
+    }
+
+    fh->pos = newPos;
+}
+
+void createDir(FileSystem* fs, const char *dirname){
+    DirEntry* parentDir = fs->currentDir;
+
+    if(parentDir->numDir + parentDir->numFiles >= MAX_ENTRIES){
+        printf("Error: Current directory is full\n");
+        return;
+    }
+
+    int freeBlock = findFree(fs->FATfs);
+
+    if(freeBlock == -1){
+        printf("Error: No free blocks\n");
+        return;
+    }
+
+    DirEntry* newDir = (DirEntry*)(&fs->FATfs->data[freeBlock * BLOCK_SIZE]);
+    strcpy(newDir->name, dirname);
+    newDir->startBlock = freeBlock;
+    newDir->size = 0;
+    newDir->parentDirBlock = parentDir->startBlock;
+    newDir->isDir = 1;
+    newDir->numFiles = 0;
+    newDir->numDir = 0;
+    //spreco di memoria? ->
+    //memset(newDir->entries, FREE, sizeof(newDir->entries));
+
+    //for max entries trova blocco libero
+
+    parentDir->numDir++;
+    fs->FATfs->FAT[freeBlock] = EF;
+}
+

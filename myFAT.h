@@ -49,7 +49,7 @@ void createFile(FileSystem* fs, const char* name);
 void eraseFile(FileSystem* fs, const char* name);
 void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len);
 void readFile(FileSystem* fs, FileHandle *fh, char *buf, int len);
-void seekFile(FileSystem* fs, FileHandle *fh, int pos);
+void seekFile(FileSystem* fs, FileHandle *fh, int newPos);
 void createDir(FileSystem* fs, const char *dirname);
 void eraseDir(FileSystem* fs, const char *dirname);
 void changeDir(FileSystem* fs, const char *dirname);
