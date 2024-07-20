@@ -52,7 +52,7 @@ FileSystem* loadFS(const char* name){
         root->numFiles = 0;
         root->numDir = 0;
         // forse troppo dispendiosa di memoria? ->
-        memset(root->entries, FREE, sizeof(root->entries));
+        //memset(root->entries, FREE, sizeof(root->entries));
 
         fs->currentDir = root;
         FATfs->FAT[0] = EF;
@@ -122,6 +122,7 @@ void eraseFile(FileSystem* fs, const char* name){
         if(parentDir->entries[i] != FREE){
             DirEntry* entry = (DirEntry*)(&fs->FATfs->data[parentDir->entries[i] * BLOCK_SIZE]);
             if(strcmp(entry->name, name) == 0 && !entry->isDir){
+                int size = entry->size;
                 int currentBlock = entry->startBlock;
                 while(currentBlock != EF){
                     int nextBlock = fs->FATfs->FAT[currentBlock];
@@ -129,8 +130,10 @@ void eraseFile(FileSystem* fs, const char* name){
                     memset(&fs->FATfs->data[currentBlock * BLOCK_SIZE], '\0', BLOCK_SIZE);
                     currentBlock = nextBlock;
                 }
-                fs->currentDir->entries[i] = FREE;
+                //fs->currentDir->entries[i] = FREE;
                 fs->currentDir->numFiles--;
+                fs->currentDir->size -= size;
+                printf("%d", size);
                 printf("File %s erased. \n", name);
                 return;
             }

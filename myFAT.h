@@ -1,7 +1,7 @@
 #ifndef MYFAT_H
 #define MYFAT_H
 
-#define MAX_NAME_LENGHT 256
+#define MAX_NAME_LENGHT 32
 #define MAX_ENTRIES 64
 #define BLOCKS_NUMBER 1024
 #define BLOCK_SIZE 64
