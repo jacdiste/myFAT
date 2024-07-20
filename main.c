@@ -16,7 +16,8 @@ int main(int argc, char *argv[]) {
     //createFile(fs, "a");
     //createFile(fs, "b");
     //createFile(fs, "c");
-    createFile(fs, "d");
+    
+    //createFile(fs, "d");
 
     //eraseFile(fs, "a");
     //eraseFile(fs, "b");
@@ -33,36 +34,25 @@ int main(int argc, char *argv[]) {
 
     printf("\nd_buf:");
     while(*d_buf1) {
+        d_buf1 = "a";
         printf("%c", *d_buf1);
         d_buf1++;
     }
     printf("\n");
 
-    seekFile(fs, d_fh, 10);
-
-    readFile(fs, d_fh, d_buf1, 5);
-
-    printf("\nd_buf:");
-    while(*d_buf1) {
-        printf("%c", *d_buf1);
-        d_buf1++;
+    printf("\n\nInside FAT:\n\n");
+    for(int i = 0; i<BLOCKS_NUMBER; i++){
+        if(fs->FATfs->FAT[i] != FREE){
+            printf(" Block %d, Address %p: %d\n", i, &fs->FATfs->FAT[i], fs->FATfs->FAT[i]);
+        }
     }
-    printf("\n");
 
-
-    //printf("\n\nInside FAT:\n\n");
-    //for(int i = 0; i<BLOCKS_NUMBER; i++){
-    //    if(fs->FATfs->FAT[i] != -1){
-    //        printf(" Block %d, Address %p: %d\n", i, &fs->FATfs->FAT[i], fs->FATfs->FAT[i]);
-    //    }
-    //}
-//
-    //printf("\n\nInside data:\n\n");
-    //for(int i = 0; i<BLOCK_SIZE*BLOCKS_NUMBER; i++){
-    //    if(fs->FATfs->data[i] != 0){
-    //        printf(" Block %d, Address %p: %d\n", i, &fs->FATfs->data[i], fs->FATfs->data[i]);
-    //    }
-    //}
+    printf("\n\nInside data:\n\n");
+    for(int i = 0; i<BLOCK_SIZE*BLOCKS_NUMBER; i++){
+        if(fs->FATfs->data[i] != '\0'){
+            printf(" Block %d, Address %p: %d\n", i, &fs->FATfs->data[i], fs->FATfs->data[i]);
+        }
+    }
 
     closeFile(fs, d_fh);
     //closeFile(fs, a_fh);

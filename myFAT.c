@@ -20,24 +20,25 @@ FileSystem* loadFS(const char* name){
         exit(EXIT_FAILURE);
     }
 
-    FATFileSystem* FATfs = mmap(NULL, sizeof(FATFileSystem), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    fs->FATfs = FATfs;
+    int usedLen = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
 
-    int fsSize = lseek(fd, 0, SEEK_END);
-    if(fsSize < sizeof(FATFileSystem)){
+    if(usedLen > 0){
+        FATFileSystem* FATfs = mmap(NULL, usedLen, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        fs->FATfs = FATfs;
+        fs->currentDir = (DirEntry*)(&FATfs->data[0]);    
+    }
+
+    else{
         if(ftruncate(fd, sizeof(FATFileSystem)) == -1){
             perror("Error resizing");
             close(fd);
             free(fs);
             exit(EXIT_FAILURE);
         }
-        fsSize = sizeof(FATFileSystem);
-    }
-    lseek(fd, 0, SEEK_SET);
 
-    int used = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
-
+        FATFileSystem* FATfs = mmap(NULL, sizeof(FATFileSystem), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        fs->FATfs = FATfs;
 
         memset(FATfs->FAT, FREE , sizeof(FATfs->FAT));
         memset(FATfs->data, '\0', sizeof(FATfs->data));
@@ -50,12 +51,12 @@ FileSystem* loadFS(const char* name){
         root->isDir = 1;
         root->numFiles = 0;
         root->numDir = 0;
-        // forse troppo dispendiosa? ->
+        // forse troppo dispendiosa di memoria? ->
         memset(root->entries, FREE, sizeof(root->entries));
 
         fs->currentDir = root;
         FATfs->FAT[0] = EF;
-+
+    }
 
     close(fd);
     return fs;
