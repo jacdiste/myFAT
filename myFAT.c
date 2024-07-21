@@ -49,10 +49,8 @@ FileSystem* loadFS(const char* name){
         root->size = 0;
         root->parentDirBlock = -1;
         root->isDir = 1;
-        root->numFiles = 0;
-        root->numDir = 0;
-        // forse troppo dispendiosa di memoria? ->
-        //memset(root->entries, FREE, sizeof(root->entries));
+        root->numEntries = 0;
+        root->entriesStartBlock = (int*)malloc(MAX_ENTRIES * sizeof(int));
 
         fs->currentDir = root;
         FATfs->FAT[0] = EF;
@@ -84,12 +82,43 @@ int findFree(FATFileSystem* FATfs){
     return -1;
 }
 
-void createFile(FileSystem* fs, const char* name){
-    DirEntry* parentDir = fs->currentDir;
+FileHandle* openFile(FileSystem* fs, const char* name){
+    DirEntry* currentDir = fs->currentDir;
 
-    if(parentDir->numFiles + parentDir->numDir >= MAX_ENTRIES){
+    for(int i = 0; i < currentDir->numEntries; i++) {
+        DirEntry* entry = (DirEntry*)(&fs->FATfs->data[currentDir->entriesStartBlock[i] * BLOCK_SIZE]);
+        if(strcmp(entry->name, name) == 0) {
+            FileHandle* fh = (FileHandle*)malloc(sizeof(FileHandle));
+            strcpy(fh->name, name);
+            fh->startBlock = currentDir->entriesStartBlock[i];
+            fh->currentBlock = fh->startBlock;
+            fh->pos = 0;
+            return fh;
+        }
+    }
+
+    printf("Error: File %s not found. Try changing Directory. \n", name);
+    return NULL;
+}
+
+void closeFile(FileSystem* fs, FileHandle* fh){
+    free(fh);
+}
+
+void createFile(FileSystem* fs, const char* name){
+    DirEntry* currentDir = fs->currentDir;
+
+    if(currentDir->numEntries >= MAX_ENTRIES){
         printf("Error: Parent directory is full\n");
         return;
+    }
+
+    for(int i = 0; i < currentDir->numEntries; i++){
+        DirEntry* entry = (DirEntry*)(&fs->FATfs->data[currentDir->entriesStartBlock[i] * BLOCK_SIZE]);
+        if(strcmp(entry->name, name) == 0){
+            printf("Error: File already exists\n");
+            return;
+        }
     }
 
     int freeBlock = findFree(fs->FATfs);
@@ -102,68 +131,44 @@ void createFile(FileSystem* fs, const char* name){
     strcpy(newFile->name, name);
     newFile->startBlock = freeBlock;
     newFile->size = 0;
-    newFile->parentDirBlock = parentDir->startBlock;
+    newFile->parentDirBlock = currentDir->startBlock;
     newFile->isDir = 0;
-    newFile->numFiles = 0;
-    newFile->numDir = 0;
-    //spreco di memoria? ->
-    //memset(newFile->entries, FREE, sizeof(newFile->entries));
+    newFile->numEntries = -1;
+    newFile->entriesStartBlock = NULL;
 
-    fs->currentDir->numFiles++;
+    currentDir->entriesStartBlock[currentDir->numEntries] = freeBlock;
+    fs->currentDir->numEntries++;
     fs->FATfs->FAT[freeBlock] = EF;
 
     printf("File %s created. \n", name);
 }
 
 void eraseFile(FileSystem* fs, const char* name){
-    DirEntry* parentDir = fs->currentDir;
+    DirEntry* currentDir = fs->currentDir;
 
     for(int i = 0; i < MAX_ENTRIES; i++){
-        if(parentDir->entries[i] != FREE){
-            DirEntry* entry = (DirEntry*)(&fs->FATfs->data[parentDir->entries[i] * BLOCK_SIZE]);
-            if(strcmp(entry->name, name) == 0 && !entry->isDir){
-                int size = entry->size;
-                int currentBlock = entry->startBlock;
-                while(currentBlock != EF){
-                    int nextBlock = fs->FATfs->FAT[currentBlock];
-                    fs->FATfs->FAT[currentBlock] = FREE;
-                    memset(&fs->FATfs->data[currentBlock * BLOCK_SIZE], '\0', BLOCK_SIZE);
-                    currentBlock = nextBlock;
-                }
-                //fs->currentDir->entries[i] = FREE;
-                fs->currentDir->numFiles--;
-                fs->currentDir->size -= size;
-                printf("%d", size);
-                printf("File %s erased. \n", name);
-                return;
+        DirEntry* entry = (DirEntry*)(&fs->FATfs->data[currentDir->entriesStartBlock[i] * BLOCK_SIZE]);
+        if(strcmp(entry->name, name) == 0 && !entry->isDir){
+            int size = entry->size;
+            int currentBlock = entry->startBlock;
+            while(currentBlock != EF){
+                int nextBlock = fs->FATfs->FAT[currentBlock];
+                fs->FATfs->FAT[currentBlock] = FREE;
+                memset(&fs->FATfs->data[currentBlock * BLOCK_SIZE], '\0', BLOCK_SIZE);
+                currentBlock = nextBlock;
             }
+
+            for(int j = i; j < currentDir->numEntries - 1; j++) {
+                currentDir->entriesStartBlock[j] = currentDir->entriesStartBlock[j + 1];
+            }
+            currentDir->entriesStartBlock[fs->currentDir->numEntries-1] = FREE;
+            fs->currentDir->numEntries--;
+            fs->currentDir->size -= size;
+            printf("File %s erased. \n", name);
+            return;
         }
     }
     printf("Error: File %s not found. \n", name);
-}
-
-FileHandle* openFile(FileSystem* fs, const char* name){
-    DirEntry* parentDir = fs->currentDir;
-
-    for(int i = 0; i < MAX_ENTRIES; i++){
-        if(parentDir->entries[i]!= FREE){
-            DirEntry* entry = (DirEntry*)(&fs->FATfs->data[parentDir->entries[i] * BLOCK_SIZE]);
-            if(strcmp(entry->name, name) == 0 && !entry->isDir){
-                FileHandle* fh = (FileHandle*)malloc(sizeof(FileHandle));
-                fh->currentDir = parentDir;
-                fh->startBlock = entry->startBlock;
-                fh->pos = 0;
-                return fh;
-            }
-        }
-    }
-
-    printf("Error: File %s not found. Try changing Directory. \n", name);
-    return NULL;
-}
-
-void closeFile(FileSystem* fs, FileHandle* fh){
-    free(fh);
 }
 
 void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
@@ -218,11 +223,10 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
 
             fs->FATfs->FAT[currentBlock] = newBlock;
             fs->FATfs->FAT[newBlock] = EF;
-            currentBlock = newBlock;
+            //currentBlock = newBlock;
         }
     }
 
-    //controllare se le size sono corrette!!
     fh->pos += len;
     DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->startBlock * BLOCK_SIZE]);
     if (fh->pos > file->size) {
@@ -304,7 +308,7 @@ void seekFile(FileSystem* fs, FileHandle *fh, int newPos){
 void createDir(FileSystem* fs, const char *dirname){
     DirEntry* parentDir = fs->currentDir;
 
-    if(parentDir->numDir + parentDir->numFiles >= MAX_ENTRIES){
+    if(parentDir->numEntries >= MAX_ENTRIES){
         printf("Error: Current directory is full\n");
         return;
     }
@@ -322,14 +326,13 @@ void createDir(FileSystem* fs, const char *dirname){
     newDir->size = 0;
     newDir->parentDirBlock = parentDir->startBlock;
     newDir->isDir = 1;
-    newDir->numFiles = 0;
-    newDir->numDir = 0;
+    newDir->numEntries = 0;
     //spreco di memoria? ->
     //memset(newDir->entries, FREE, sizeof(newDir->entries));
 
     //for max entries trova blocco libero
 
-    parentDir->numDir++;
+    parentDir->numEntries++;
     fs->FATfs->FAT[freeBlock] = EF;
 }
 

@@ -1,8 +1,8 @@
 #ifndef MYFAT_H
 #define MYFAT_H
 
-#define MAX_NAME_LENGHT 32
-#define MAX_ENTRIES 64
+#define MAX_NAME_LENGHT 16
+#define MAX_ENTRIES 32
 #define BLOCKS_NUMBER 1024
 #define BLOCK_SIZE 64
 #define FREE -1
@@ -15,14 +15,15 @@ typedef struct DirEntry{
     int parentDirBlock;
 
     int isDir;
-    int numFiles;
-    int numDir;
-    int entries[MAX_ENTRIES];
+    int numEntries;
+    int* entriesStartBlock;
 } DirEntry;
 
 typedef struct{
-    DirEntry* currentDir;
+    char parentDirName[MAX_NAME_LENGHT];
+    char name[MAX_NAME_LENGHT];
     int startBlock;
+    int currentBlock;
     int pos;
 } FileHandle;
 
