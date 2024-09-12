@@ -4,19 +4,18 @@
 #define MAX_NAME_LENGHT 16
 #define MAX_ENTRIES 32
 #define BLOCKS_NUMBER 1024
-#define BLOCK_SIZE 64
+#define BLOCK_SIZE 40
 #define FREE -1
 #define EF -2
 
 typedef struct DirEntry{
     char name[MAX_NAME_LENGHT];
-    int startBlock;
+    int startDataIndex;
     int size;
+    int dirBlock;
     int parentDirBlock;
-
     int isDir;
     int numEntries;
-    int* entriesStartBlock;
 } DirEntry;
 
 typedef struct{
