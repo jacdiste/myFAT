@@ -10,7 +10,7 @@
 
 typedef struct DirEntry{
     char name[MAX_NAME_LENGHT];
-    int startDataIndex;
+    int startDataBlock;
     int size;
     int dirBlock;
     int parentDirBlock;

@@ -13,11 +13,11 @@ int main(int argc, char *argv[]) {
 
     FileSystem* fs = loadFS("myFATfs");
     
-    createFile(fs, "a");
-    createFile(fs, "b");
-    createFile(fs, "c");
-    createFile(fs, "d");
-    createFile(fs, "e");
+    //createFile(fs, "a");
+    //createFile(fs, "b");
+    //createFile(fs, "c");
+    //createFile(fs, "d");
+    //createFile(fs, "e");
     //createFile(fs, "f");
     //createFile(fs, "g");
     //createFile(fs, "h");
@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
 
     //eraseFile(fs, "a");
     //eraseFile(fs, "b");
-    //eraseFile(fs, "c");
+    eraseFile(fs, "c");
     //eraseFile(fs, "d");
     //eraseFile(fs, "e");
     //eraseFile(fs, "f");
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     //eraseFile(fs, "d");
     //eraseFile(fs, "a");
 
-    char* d_buf1 = (char*)malloc(5);
+    //char* d_buf1 = (char*)malloc(5);
     //readFile(fs, d_fh, d_buf1, 5);
 
     //printf("\nd_buf:");
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     //closeFile(fs, d_fh);
     //closeFile(fs, a_fh);
 
-    free(d_buf1);
+    //free(d_buf1);
     unloadFS(fs);
     return 0;
 }

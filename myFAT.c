@@ -44,7 +44,7 @@ FileSystem* loadFS(const char* name){
 
         DirEntry* root = (DirEntry*)(&FATfs->data[0]);
         strcpy(root->name, "/");
-        root->startDataIndex = -1;
+        root->startDataBlock = -1;
         root->size = 40;
         root->dirBlock = 0;
         root->parentDirBlock = -1;
@@ -83,13 +83,13 @@ int findFree(FATFileSystem* FATfs){
 
 FileHandle* openFile(FileSystem* fs, const char* name){
     DirEntry* currentDir = fs->currentDir;
-    int dirStartBlock = currentDir->startDataIndex;
+    int dirStartBlock = currentDir->startDataBlock;
     while (dirStartBlock != EF) {
         DirEntry* entry = (DirEntry*)(&fs->FATfs->data[dirStartBlock * BLOCK_SIZE]);
         if (strcmp(entry->name, name) == 0 && !entry->isDir) {
             FileHandle* fh = (FileHandle*)malloc(sizeof(FileHandle));
             strcpy(fh->name, name);
-            fh->startBlock = entry->startDataIndex;
+            fh->startBlock = entry->startDataBlock;
             fh->currentBlock = fh->startBlock;
             fh->pos = 0;
             return fh;
@@ -135,7 +135,7 @@ void createFile(FileSystem* fs, const char* name){
     DirEntry* newFile = (DirEntry*)(&fs->FATfs->data[freeBlock * BLOCK_SIZE]);
     strcpy(newFile->name, name);
     //
-    newFile->startDataIndex = -1;
+    newFile->startDataBlock = -1;
     newFile->size = 40;
     newFile->dirBlock = freeBlock;
     newFile->parentDirBlock = currentDir->dirBlock;
@@ -155,19 +155,18 @@ void createFile(FileSystem* fs, const char* name){
     printf("File %s created. \n", name);
 }
 
-//updatare eraseFile problema dell'ultimo blocco no EF
 void eraseFile(FileSystem* fs, const char* name){
     DirEntry* currentDir = fs->currentDir;
-    int dirStartBlock = currentDir->startDataIndex;
-    int prevBlock = dirStartBlock;
+    int entryBlock = currentDir->dirBlock;
+    int prevBlock = currentDir->dirBlock;
 
-    while(dirStartBlock!=EF){
-        DirEntry* entry = (DirEntry*)(&fs->FATfs->data[dirStartBlock * BLOCK_SIZE]);
+    while(entryBlock!=EF){
+        DirEntry* entry = (DirEntry*)(&fs->FATfs->data[entryBlock * BLOCK_SIZE]);
         if(strcmp(entry->name, name) == 0 && !entry->isDir){
             int size = entry->size;
 
-            if(entry->startDataIndex != -1){
-                int currentDataBlock = entry->startDataIndex;
+            if(entry->startDataBlock != -1){
+                int currentDataBlock = entry->startDataBlock;
                 while(currentDataBlock != EF){
                     int nextDataBlock = fs->FATfs->FAT[currentDataBlock];
                     fs->FATfs->FAT[currentDataBlock] = FREE;
@@ -176,15 +175,10 @@ void eraseFile(FileSystem* fs, const char* name){
                 }
             }
 
-            printf("prevBlock = %d\n", prevBlock);
-            if(prevBlock == -1){
-                fs->FATfs->FAT[prevBlock] = EF;
-            }
-            else {
-                fs->FATfs->FAT[prevBlock] = fs->FATfs->FAT[dirStartBlock];
-            }
-            fs->FATfs->FAT[dirStartBlock] = FREE;
-            memset(&fs->FATfs->data[dirStartBlock * BLOCK_SIZE], '\0', BLOCK_SIZE);
+            fs->FATfs->FAT[prevBlock] = fs->FATfs->FAT[entryBlock];
+            fs->FATfs->FAT[entryBlock] = FREE;
+
+            memset(&fs->FATfs->data[entryBlock * BLOCK_SIZE], '\0', BLOCK_SIZE);
 
             fs->currentDir->numEntries--;
             fs->currentDir->size -= size;
@@ -192,8 +186,10 @@ void eraseFile(FileSystem* fs, const char* name){
             return;
         }
 
-        dirStartBlock = fs->FATfs->FAT[dirStartBlock];
+        prevBlock = entryBlock;
+        entryBlock = fs->FATfs->FAT[entryBlock];
     }
+
     printf("Error: File %s not found. \n", name);
 }
 
@@ -348,9 +344,9 @@ void createDir(FileSystem* fs, const char *dirname){
 
     DirEntry* newDir = (DirEntry*)(&fs->FATfs->data[freeBlock * BLOCK_SIZE]);
     strcpy(newDir->name, dirname);
-    newDir->startDataIndex = freeBlock;
+    newDir->startDataBlock = freeBlock;
     newDir->size = 0;
-    newDir->parentDirBlock = parentDir->startDataIndex;
+    newDir->parentDirBlock = parentDir->startDataBlock;
     newDir->isDir = 1;
     newDir->numEntries = 0;
     //spreco di memoria? ->
