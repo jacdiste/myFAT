@@ -21,7 +21,7 @@ typedef struct DirEntry{
 typedef struct{
     char parentDirName[MAX_NAME_LENGHT];
     char name[MAX_NAME_LENGHT];
-    int startBlock;
+    int startDataBlock;
     int currentBlock;
     int pos;
 } FileHandle;

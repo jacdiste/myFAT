@@ -23,9 +23,9 @@ int main(int argc, char *argv[]) {
     //createFile(fs, "h");
     //createFile(fs, "i");
 
-    //eraseFile(fs, "a");
+    eraseFile(fs, "a");
     //eraseFile(fs, "b");
-    eraseFile(fs, "c");
+    //eraseFile(fs, "c");
     //eraseFile(fs, "d");
     //eraseFile(fs, "e");
     //eraseFile(fs, "f");
@@ -36,8 +36,9 @@ int main(int argc, char *argv[]) {
     //FileHandle* d_fh = openFile(fs, "d");
     //FileHandle* a_fh = openFile(fs, "a");
 
-    //writeFile(fs, d_fh, "In pitch dark I go walking in your landscape Broken branches Trip me as I speak Just 'cause you feel it Doesn't mean it's there Just 'cause you feel it Doesn't mean it's there There's always a siren Singing you to shipwreck (Don't reach out, don't reach out Don't reach out, don't reach out) Steer away from theserocks We'd be a walking disaster (Don't reach out, don't reach out Don't reach out, don't reach out) Just 'cause you feel it Doesn't mean it's there (Someone on your shoulder Someone on your shoulder) Just 'cause you feel it Doesn't mean it's there (Someone on your shoulder Someone on your shoulder) There there! Why so green and lonely? Lonely, lonely?", 667); 
+    //writeFile(fs, a_fh, "In pitch dark I go walking in your landscape Broken branches Trip me as I speak Just 'cause you feel it Doesn't mean it's there Just 'cause you feel it Doesn't mean it's there There's always a siren Singing you to shipwreck (Don't reach out, don't reach out Don't reach out, don't reach out) Steer away from theserocks We'd be a walking disaster (Don't reach out, don't reach out Don't reach out, don't reach out) Just 'cause you feel it Doesn't mean it's there (Someone on your shoulder Someone on your shoulder) Just 'cause you feel it Doesn't mean it's there (Someone on your shoulder Someone on your shoulder) There there! Why so green and lonely? Lonely, lonely?", 667); 
     //writeFile(fs, a_fh, "Testing", 8);
+
     //writeFile(fs, d_fh, "Aggiungo questa frase vediamo che succede", 42);
 
     //eraseFile(fs, "d");

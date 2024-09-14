@@ -83,18 +83,18 @@ int findFree(FATFileSystem* FATfs){
 
 FileHandle* openFile(FileSystem* fs, const char* name){
     DirEntry* currentDir = fs->currentDir;
-    int dirStartBlock = currentDir->startDataBlock;
-    while (dirStartBlock != EF) {
-        DirEntry* entry = (DirEntry*)(&fs->FATfs->data[dirStartBlock * BLOCK_SIZE]);
+    int dirLastBlock = currentDir->startDataBlock;
+    while (dirLastBlock != EF) {
+        DirEntry* entry = (DirEntry*)(&fs->FATfs->data[dirLastBlock * BLOCK_SIZE]);
         if (strcmp(entry->name, name) == 0 && !entry->isDir) {
             FileHandle* fh = (FileHandle*)malloc(sizeof(FileHandle));
             strcpy(fh->name, name);
-            fh->startBlock = entry->startDataBlock;
-            fh->currentBlock = fh->startBlock;
+            fh->startDataBlock = entry->startDataBlock;
+            fh->currentBlock = dirLastBlock;
             fh->pos = 0;
             return fh;
         }
-        dirStartBlock = fs->FATfs->FAT[dirStartBlock];
+        dirLastBlock = fs->FATfs->FAT[dirLastBlock];
     }
 
     printf("Error: File %s not found. Try changing Directory. \n", name);
@@ -167,12 +167,15 @@ void eraseFile(FileSystem* fs, const char* name){
 
             if(entry->startDataBlock != -1){
                 int currentDataBlock = entry->startDataBlock;
-                while(currentDataBlock != EF){
-                    int nextDataBlock = fs->FATfs->FAT[currentDataBlock];
-                    fs->FATfs->FAT[currentDataBlock] = FREE;
-                    memset(&fs->FATfs->data[currentDataBlock * BLOCK_SIZE], '\0', BLOCK_SIZE);
-                    currentDataBlock = nextDataBlock;
+                int nextDataBlock = fs->FATfs->FAT[currentDataBlock];
+                while(nextDataBlock != EF){
+                    int temp = fs->FATfs->FAT[nextDataBlock];
+                    fs->FATfs->FAT[nextDataBlock] = FREE;
+                    memset(&fs->FATfs->data[nextDataBlock * BLOCK_SIZE], '\0', BLOCK_SIZE);
+                    nextDataBlock = temp;
                 }
+                fs->FATfs->FAT[currentDataBlock] = FREE;
+                memset(&fs->FATfs->data[currentDataBlock * BLOCK_SIZE], '\0', BLOCK_SIZE);
             }
 
             fs->FATfs->FAT[prevBlock] = fs->FATfs->FAT[entryBlock];
@@ -200,14 +203,27 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
         return;
     }
 
-    int currentBlock = fh->startBlock;
+    int currentBlock = fh->startDataBlock;
     int fileOffset = fh->pos % BLOCK_SIZE;
     int bytesToWrite = len;
     int bufOffset = 0;
 
     while(bytesToWrite > 0){
         if(fileOffset == 0){
-            if(fs->FATfs->FAT[currentBlock] == EF){
+            if(currentBlock == -1){
+                int newBlock = findFree(fs->FATfs);
+                if(newBlock == -1){
+                    printf("No more free blocks. \n");
+                    return;
+                }
+
+                memcpy(&fs->FATfs->data[fh->currentBlock * BLOCK_SIZE] + 16, &newBlock, 4); //devo fare in modo che scriva bene solo 02000000 e non 02020202
+                fh->startDataBlock = newBlock;
+                currentBlock = newBlock;
+                fs->FATfs->FAT[currentBlock] = EF;
+            }
+
+            else if(fs->FATfs->FAT[currentBlock] == EF){
                 int newBlock = findFree(fs->FATfs);
                 if(newBlock == -1){
                     printf("No more free blocks. \n");
@@ -249,8 +265,8 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
         }
     }
 
-    fh->pos += len;
-    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->startBlock * BLOCK_SIZE]);
+    fh->pos += len;                             //fh->startDataBlock
+    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->currentBlock * BLOCK_SIZE]);
     if (fh->pos > file->size) {
         int sizeDiff = fh->pos - file->size;
 
@@ -259,6 +275,8 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
         DirEntry* currentDir = (DirEntry*)(&fs->FATfs->data[file->parentDirBlock * BLOCK_SIZE]);
         currentDir->size += sizeDiff;
     }
+
+    printf("File %s written. \n", fh->name);
 }
 
 void readFile(FileSystem* fs, FileHandle *fh, char *buf, int len){
@@ -268,8 +286,8 @@ void readFile(FileSystem* fs, FileHandle *fh, char *buf, int len){
         return;
     }
 
-    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->startBlock * BLOCK_SIZE]);
-    int currentBlock = fh->startBlock;
+    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->startDataBlock * BLOCK_SIZE]);
+    int currentBlock = fh->startDataBlock;
     int fileOffset = fh->pos % BLOCK_SIZE;
     int bytesToRead = len;
     int bufOffset = 0;
@@ -310,7 +328,7 @@ void seekFile(FileSystem* fs, FileHandle *fh, int newPos){
         return;
     }
 
-    int indexBlock = fh->startBlock;
+    int indexBlock = fh->startDataBlock;
 
     int pos = newPos;
 
