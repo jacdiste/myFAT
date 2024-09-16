@@ -10,10 +10,10 @@
 
 typedef struct DirEntry{
     char name[MAX_NAME_LENGHT];
-    int startDataBlock;
+    int startDataBlockIndex;
     int size;
-    int dirBlock;
-    int parentDirBlock;
+    int currentBlockIndex;
+    int parentDirBlockIndex;
     int isDir;
     int numEntries;
 } DirEntry;
@@ -21,8 +21,8 @@ typedef struct DirEntry{
 typedef struct{
     char parentDirName[MAX_NAME_LENGHT];
     char name[MAX_NAME_LENGHT];
-    int currentDataBlock;
-    int currentFatBlock;
+    int currentDataBlockIndex;
+    int currentFatBlockIndex;
     int pos;
 } FileHandle;
 
