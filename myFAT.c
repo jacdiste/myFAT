@@ -161,6 +161,7 @@ void eraseFile(FileSystem* fs, const char* name){
     int entryBlock = 0;
     int prevBlock = 0;
 
+
     while(entryBlock!=EF){
         DirEntry* entry = (DirEntry*)(&fs->FATfs->data[entryBlock * BLOCK_SIZE]);
         if(strcmp(entry->name, name) == 0 && !entry->isDir && entry->parentDirBlockIndex == currentDir->currentBlockIndex){
@@ -489,12 +490,22 @@ void eraseDir(FileSystem* fs, const char *dirname){
 
     while(fs->FATfs->FAT[currentBlock] != EF){
         DirEntry* targetDir = (DirEntry*)(&fs->FATfs->data[currentBlock * BLOCK_SIZE]);
-        if(targetDir->isDir && strcmp(targetDir->name, dirname) == 0 && targetDir->parentDirBlockIndex == currentBlock){
+        if(targetDir->isDir && strcmp(targetDir->name, dirname) == 0 && targetDir->parentDirBlockIndex == parentDir->currentBlockIndex){
             int i = 0;
-            while(fs->FATfs->FAT[i] != EF){
+            char fileName[MAX_NAME_LENGHT] = {0};
+
+            while(1){
                 DirEntry* file = (DirEntry*)(&fs->FATfs->data[i * BLOCK_SIZE]);
+                
                 if(file->parentDirBlockIndex == targetDir->currentBlockIndex){
-                    eraseFile(fs, file->name);
+                    strcpy(fileName, file->name);
+                    fs->currentDir = targetDir;
+                    eraseFile(fs, fileName);
+                    fs->currentDir = parentDir;
+                }
+
+                if(fs->FATfs->FAT[i] == EF){
+                    break;
                 }
 
                 i = fs->FATfs->FAT[i];
@@ -547,4 +558,31 @@ void changeDir(FileSystem* fs, const char *dirname){
 
     printf("Error: Directory '%s' not found in this directory.\n", dirname);
     return;
+}
+
+void listDir(FileSystem* fs){
+    DirEntry* currentDir = fs->currentDir;
+
+    printf("Current directory: %s\n", currentDir->name);
+
+    if(currentDir->numEntries == 0){
+        printf("Directory is empty.\n");
+        return;
+    }
+
+    int currentBlock = 0;
+    while(fs->FATfs->FAT[currentBlock] != EF){
+        DirEntry* entry = (DirEntry*)(&fs->FATfs->data[currentBlock * BLOCK_SIZE]);
+        if(entry->parentDirBlockIndex == currentDir->currentBlockIndex){
+            if(entry->isDir){
+                printf("[%s] ", entry->name);
+            }
+            else{
+                printf("%s ", entry->name);
+            }
+        }
+
+        currentBlock = fs->FATfs->FAT[currentBlock];
+    }
+    printf("\n");
 }
