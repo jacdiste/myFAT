@@ -89,15 +89,15 @@ FileHandle* openFile(FileSystem* fs, const char* name){
         if (strcmp(entry->name, name) == 0 && !entry->isDir) {
             FileHandle* fh = (FileHandle*)malloc(sizeof(FileHandle));
             strcpy(fh->name, name);
-            fh->startDataBlock = entry->startDataBlock;
-            fh->currentBlock = dirLastBlock;
-            fh->pos = 0;
+            fh->currentDataBlock = entry->startDataBlock;
+            fh->currentFatBlock = dirLastBlock;
+            fh->pos = 0; //ATTENZIONE OGNI VOLTA CHE APRO UN FILE SI SETTA A 0 pos QUINDI COSA SUCCEDE SE SCRIVO IN MOMENTI DIVERSI?
             return fh;
         }
         dirLastBlock = fs->FATfs->FAT[dirLastBlock];
     }
 
-    printf("Error: File %s not found. Try changing Directory. \n", name);
+    printf("Error: File '%s' not found. Try changing Directory. \n", name);
     return NULL;
 }
 
@@ -119,14 +119,13 @@ void createFile(FileSystem* fs, const char* name){
     while(dirStartBlock != EF){
         DirEntry* entry = (DirEntry*)(&fs->FATfs->data[dirStartBlock * BLOCK_SIZE]);
         if(strcmp(entry->name, name) == 0){
-            printf("Error: File %s already exists\n", name);
+            printf("Error: File '%s' already exists\n", name);
             return;
         }
         dirStartBlock = fs->FATfs->FAT[dirStartBlock];
     }
 
     int freeBlock = findFree(fs->FATfs);
-    printf("\n%d\n", freeBlock);
     if(freeBlock == -1){
         printf("Error: No free blocks\n");
         return;
@@ -152,7 +151,7 @@ void createFile(FileSystem* fs, const char* name){
     fs->FATfs->FAT[lastBlock] = freeBlock;
     fs->FATfs->FAT[freeBlock] = EF;
 
-    printf("File %s created. \n", name);
+    printf("File '%s' created. \n", name);
 }
 
 void eraseFile(FileSystem* fs, const char* name){
@@ -185,7 +184,7 @@ void eraseFile(FileSystem* fs, const char* name){
 
             fs->currentDir->numEntries--;
             fs->currentDir->size -= size;
-            printf("File %s erased. \n", name);
+            printf("File '%s' erased. \n", name);
             return;
         }
 
@@ -193,7 +192,49 @@ void eraseFile(FileSystem* fs, const char* name){
         entryBlock = fs->FATfs->FAT[entryBlock];
     }
 
-    printf("Error: File %s not found. \n", name);
+    printf("Error: File '%s' not found. \n", name);
+}
+
+void eraseFileData(FileSystem *fs, const char * name){
+    DirEntry* currentDir = fs->currentDir;
+    int entryBlock = currentDir->dirBlock;
+    int prevBlock = currentDir->dirBlock;
+
+    while(entryBlock!=EF){
+        DirEntry* entry = (DirEntry*)(&fs->FATfs->data[entryBlock * BLOCK_SIZE]);
+        if(strcmp(entry->name, name) == 0 && !entry->isDir){
+            int size = entry->size;
+            int fileDataSize = size - BLOCK_SIZE;
+
+            if(entry->startDataBlock != -1){
+                int currentDataBlock = entry->startDataBlock;
+                int nextDataBlock = fs->FATfs->FAT[currentDataBlock];
+                while(nextDataBlock != EF){
+                    int temp = fs->FATfs->FAT[nextDataBlock];
+                    fs->FATfs->FAT[nextDataBlock] = FREE;
+                    memset(&fs->FATfs->data[nextDataBlock * BLOCK_SIZE], '\0', BLOCK_SIZE);
+                    nextDataBlock = temp;
+                }
+                fs->FATfs->FAT[currentDataBlock] = FREE;
+                memset(&fs->FATfs->data[currentDataBlock * BLOCK_SIZE], '\0', BLOCK_SIZE);
+            }
+            else{
+                printf("Error: File '%s' has no data. \n", name);
+                return;
+            }
+
+            entry->size = BLOCK_SIZE;
+            entry->startDataBlock = -1;
+            fs->currentDir->size -= fileDataSize;
+            printf("File '%s' datas erased. \n", name);
+            return;
+        }
+
+        prevBlock = entryBlock;
+        entryBlock = fs->FATfs->FAT[entryBlock];
+    }
+
+    printf("Error: File '%s' not found. \n", name);
 }
 
 void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
@@ -203,27 +244,33 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
         return;
     }
 
-    int currentBlock = fh->startDataBlock;
+    int currentBlock = fh->currentDataBlock;
     int fileOffset = fh->pos % BLOCK_SIZE;
     int bytesToWrite = len;
     int bufOffset = 0;
 
-    while(bytesToWrite > 0){
-        if(fileOffset == 0){
-            if(currentBlock == -1){
-                int newBlock = findFree(fs->FATfs);
-                if(newBlock == -1){
-                    printf("No more free blocks. \n");
-                    return;
-                }
-
-                memcpy(&fs->FATfs->data[fh->currentBlock * BLOCK_SIZE] + 16, &newBlock, 4); //devo fare in modo che scriva bene solo 02000000 e non 02020202
-                fh->startDataBlock = newBlock;
-                currentBlock = newBlock;
-                fs->FATfs->FAT[currentBlock] = EF;
+    if(len > 0){
+        if(currentBlock == -1){
+            int newBlock = findFree(fs->FATfs);
+            if(newBlock == -1){
+                printf("Error: no more free blocks. \n");
+                return;
             }
 
-            else if(fs->FATfs->FAT[currentBlock] == EF){
+            memcpy(&fs->FATfs->data[fh->currentFatBlock * BLOCK_SIZE] + 16, &newBlock, 4);
+            fh->currentDataBlock = newBlock;
+
+            currentBlock = newBlock;
+            fs->FATfs->FAT[currentBlock] = EF;
+        }
+    }
+    else{
+        printf("Error: len must be greater than 0 \n");
+        return;
+    }
+
+    if(fileOffset == 0 && fh->pos != 0){
+            if(fs->FATfs->FAT[currentBlock] == EF){
                 int newBlock = findFree(fs->FATfs);
                 if(newBlock == -1){
                     printf("No more free blocks. \n");
@@ -234,11 +281,9 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
                 fs->FATfs->FAT[newBlock] = EF;
                 currentBlock = newBlock;
             }
-
-            else{
-                currentBlock = fs->FATfs->FAT[currentBlock];
-            }
         }
+
+    while(bytesToWrite > 0){
 
         int inBlockWritableBytes = BLOCK_SIZE - fileOffset;
         if(inBlockWritableBytes > bytesToWrite){
@@ -251,32 +296,50 @@ void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len){
         bufOffset += inBlockWritableBytes;
         fileOffset = (fileOffset + inBlockWritableBytes) % BLOCK_SIZE;
 
-        if(fileOffset==0 && fs->FATfs->FAT[currentBlock]==EF){
-            int newBlock = findFree(fs->FATfs);
-            if(newBlock == -1){
-                printf("No more free blocks, only %d bytes have been written! \n", len-bytesToWrite);
-                fh->pos += (len - bytesToWrite);
-                return;
+        if(bytesToWrite > 0){
+            if(fs->FATfs->FAT[currentBlock] == EF){
+                int newBlock = findFree(fs->FATfs);
+                if(newBlock == -1){
+                    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->currentFatBlock * BLOCK_SIZE]);
+                    DirEntry* currentDir = (DirEntry*)(&fs->FATfs->data[file->parentDirBlock * BLOCK_SIZE]);
+                    int fileDataSize = file->size - BLOCK_SIZE;
+                    int finalDataSize = fh->pos + len;
+                    int addedLen = 0;
+
+                    if (finalDataSize > fileDataSize){
+                        addedLen += (finalDataSize - fileDataSize);
+                        file->size += addedLen;
+                        currentDir->size += addedLen;
+                    }
+
+                    printf("No more free blocks, only %d bytes have been written! (%d bytes added) \n", len-bytesToWrite, addedLen);
+                    return;
+                }
+
+                fs->FATfs->FAT[currentBlock] = newBlock;
+                fs->FATfs->FAT[newBlock] = EF;
+                currentBlock = newBlock;
             }
 
-            fs->FATfs->FAT[currentBlock] = newBlock;
-            fs->FATfs->FAT[newBlock] = EF;
-            //currentBlock = newBlock;
+            else{
+                currentBlock = fs->FATfs->FAT[currentBlock];
+            }
         }
     }
 
-    fh->pos += len;                             //fh->startDataBlock
-    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->currentBlock * BLOCK_SIZE]);
-    if (fh->pos > file->size) {
-        int sizeDiff = fh->pos - file->size;
+    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->currentFatBlock * BLOCK_SIZE]);
+    DirEntry* currentDir = (DirEntry*)(&fs->FATfs->data[file->parentDirBlock * BLOCK_SIZE]);
+    int fileDataSize = file->size - BLOCK_SIZE;
+    int finalDataSize = fh->pos + len;
+    int addedLen = 0;
 
-        file->size = fh->pos;
-
-        DirEntry* currentDir = (DirEntry*)(&fs->FATfs->data[file->parentDirBlock * BLOCK_SIZE]);
-        currentDir->size += sizeDiff;
+    if (finalDataSize > fileDataSize){
+        addedLen += (finalDataSize - fileDataSize);
+        file->size += addedLen;
+        currentDir->size += addedLen;
     }
 
-    printf("File %s written. \n", fh->name);
+    printf("File '%s' written (%d bytes added) \n", fh->name, addedLen);
 }
 
 void readFile(FileSystem* fs, FileHandle *fh, char *buf, int len){
@@ -286,8 +349,8 @@ void readFile(FileSystem* fs, FileHandle *fh, char *buf, int len){
         return;
     }
 
-    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->startDataBlock * BLOCK_SIZE]);
-    int currentBlock = fh->startDataBlock;
+    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->currentDataBlock * BLOCK_SIZE]);
+    int currentBlock = fh->currentDataBlock;
     int fileOffset = fh->pos % BLOCK_SIZE;
     int bytesToRead = len;
     int bufOffset = 0;
@@ -323,26 +386,45 @@ void seekFile(FileSystem* fs, FileHandle *fh, int newPos){
         return;
     }
 
-    if(newPos > fh->pos || newPos < 0){
-        printf("Error: Invalid seek position. \n");
+    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->currentFatBlock * BLOCK_SIZE]);
+    int fileDataSize = 0;
+    int currentBlock = file->startDataBlock;
+    int newPosBlock = newPos / BLOCK_SIZE;
+
+    if(file->size > BLOCK_SIZE){
+        fileDataSize += (file->size - BLOCK_SIZE);
+    }
+
+    if(currentBlock == -1){
+        fh->pos = fileDataSize;
+        printf("File '%s' seeked to position %d \n", fh->name, fileDataSize);
+
         return;
     }
 
-    int indexBlock = fh->startDataBlock;
-
-    int pos = newPos;
-
-    while(pos>=BLOCK_SIZE){
-        indexBlock = fs->FATfs->FAT[indexBlock];
-        if(indexBlock==EF){
-            printf("Error: Seek position out of file bounds. \n");
-            return;
+    if(newPos < 0 || newPos > fileDataSize){
+        while(fs->FATfs->FAT[currentBlock]!=EF){
+            currentBlock = fs->FATfs->FAT[currentBlock];
         }
 
-        pos -= BLOCK_SIZE;
+        fh->currentDataBlock = currentBlock;
+        fh->pos = fileDataSize;
+        printf("Error: Invalid seek position, seeked to the last position: %d, at block %d. \n", fileDataSize, currentBlock);
+
+        return;
     }
 
+    if(newPosBlock != 0){
+        for(int i = 0; i < newPosBlock; i++){
+            if(fs->FATfs->FAT[currentBlock] != EF){
+                currentBlock = fs->FATfs->FAT[currentBlock];
+            }
+        }
+    }
+
+    fh->currentDataBlock = currentBlock;
     fh->pos = newPos;
+    printf("File '%s' seeked to position %d, at block %d. \n", fh->name, newPos, currentBlock);
 }
 
 void createDir(FileSystem* fs, const char *dirname){

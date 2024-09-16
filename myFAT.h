@@ -21,8 +21,8 @@ typedef struct DirEntry{
 typedef struct{
     char parentDirName[MAX_NAME_LENGHT];
     char name[MAX_NAME_LENGHT];
-    int startDataBlock;
-    int currentBlock;
+    int currentDataBlock;
+    int currentFatBlock;
     int pos;
 } FileHandle;
 
@@ -43,6 +43,7 @@ void unloadFS(FileSystem* fs);
 int findFree(FATFileSystem* FATfs);
 FileHandle* openFile(FileSystem* fs, const char* name);
 void closeFile(FileSystem* fs, FileHandle* fh);
+void eraseFileData(FileSystem* fs, const char* name);
 
 // Requested functions
 void createFile(FileSystem* fs, const char* name);
