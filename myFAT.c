@@ -349,28 +349,39 @@ void readFile(FileSystem* fs, FileHandle *fh, char *buf, int len){
         return;
     }
 
-    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->currentDataBlock * BLOCK_SIZE]);
+    if(len <= 0){
+        printf("Error: len must be greater than or equal to 0. \n");
+        return;
+    }
+
+    if(fh->currentDataBlock == -1){
+        printf("Error: File '%s' has no data. \n", fh->name);
+        return;
+    }
+
+    DirEntry* file = (DirEntry*)(&fs->FATfs->data[fh->currentFatBlock * BLOCK_SIZE]);
+    int fileDataSize = file->size - BLOCK_SIZE;
+
+    if(len > (fileDataSize - fh->pos)){
+        printf("Warning: len is greater than data size, you will read until the end of data. \n");
+    }
+
     int currentBlock = fh->currentDataBlock;
     int fileOffset = fh->pos % BLOCK_SIZE;
     int bytesToRead = len;
     int bufOffset = 0;
 
-    while(bytesToRead > 0 && fh->pos < file->size){
+    while(bytesToRead > 0){
         int inBlockReadableBytes = BLOCK_SIZE - fileOffset;
 
         if(inBlockReadableBytes > bytesToRead){
             inBlockReadableBytes = bytesToRead;
         }
 
-        if(inBlockReadableBytes > file->size - fh->pos){
-            inBlockReadableBytes = file->size - fh->pos;
-        }
-
         memcpy(&buf[bufOffset], &fs->FATfs->data[currentBlock * BLOCK_SIZE + fileOffset], inBlockReadableBytes);
 
         bytesToRead -= inBlockReadableBytes;
         bufOffset += inBlockReadableBytes;
-        fh->pos += inBlockReadableBytes;
         fileOffset = (fileOffset + inBlockReadableBytes) % BLOCK_SIZE;
 
         if(fileOffset==0){
