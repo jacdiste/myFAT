@@ -41,6 +41,7 @@ typedef struct{
 FileSystem* loadFS(const char* name);
 void unloadFS(FileSystem* fs);
 int findFree(FATFileSystem* FATfs);
+void adjustSize(FileSystem* fs, DirEntry* parentDir, int targetSize, int type);
 FileHandle* openFile(FileSystem* fs, const char* name);
 void closeFile(FileSystem* fs, FileHandle* fh);
 void eraseFileData(FileSystem* fs, const char* name);

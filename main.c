@@ -33,6 +33,7 @@ int main(int argc, char *argv[]) {
     //createFile(fs, "a");
     createDir(fs, "1");
     createFile(fs, "b");
+    listDir(fs);
     changeDir(fs, "1");
     createFile(fs, "1a");
     createDir(fs, "2");
@@ -40,6 +41,8 @@ int main(int argc, char *argv[]) {
     changeDir(fs, "2"); //NON VA
     createFile(fs, "2a");
     listDir(fs);
+    changeDir(fs, "..");
+    changeDir(fs, "..");
     //createFile(fs, "e");
     //createFile(fs, "f");
     //createFile(fs, "g");
@@ -89,8 +92,6 @@ int main(int argc, char *argv[]) {
     //closeFile(fs, b_fh);
     //closeFile(fs, c_fh);
     //closeFile(fs, d_fh);
-    changeDir(fs, "..");
-    listDir(fs);
     //createDir(fs, "subroot");
 
     unloadFS(fs);
