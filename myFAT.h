@@ -5,6 +5,7 @@
 #define MAX_ENTRIES 32
 #define BLOCKS_NUMBER 1024
 #define BLOCK_SIZE 40
+#define MAX_DATA 40880 //
 #define FREE -1
 #define EF -2
 
@@ -48,13 +49,13 @@ void eraseFileData(FileSystem* fs, const char* name);
 
 // Requested functions
 void createFile(FileSystem* fs, const char* name);
-void eraseFile(FileSystem* fs, const char* name);
+void eraseFile(FileSystem* fs, const char* name, DirEntry* parentDir);
 void writeFile(FileSystem* fs, FileHandle *fh, const char *buf, int len);
 void readFile(FileSystem* fs, FileHandle *fh, char *buf, int len);
 void seekFile(FileSystem* fs, FileHandle *fh, int newPos);
-void createDir(FileSystem* fs, const char *dirname);
-void eraseDir(FileSystem* fs, const char *dirname);
-void changeDir(FileSystem* fs, const char *dirname);
+void createDir(FileSystem* fs, const char *dirName);
+void eraseDir(FileSystem* fs, const char *dirName, DirEntry* parentDir);
+void changeDir(FileSystem* fs, const char *dirName);
 void listDir(FileSystem* fs);
 
 

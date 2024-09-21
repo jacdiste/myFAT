@@ -10,89 +10,145 @@
 #include "myFAT.h"
 
 void printMenu() {
-    printf("\n--- myFAT Menu ---\n");
-    printf("Commands:\n");
-    printf("1. createFile <filename>\n");
-    printf("2. eraseFile <filename>\n");
-    printf("3. writeFile <filename> <text> <length>\n");
-    printf("4. readFile <filename> <length>\n");
-    printf("5. createDir <dirname>\n");
-    printf("6. eraseDir <dirname>\n");
-    printf("7. listDir <dirname>\n");
-    printf("8. quit\n");
+    printf("\n-------------- myFAT Menu --------------\n");
+    printf("1. Create a file\n");
+    printf("2. Erase a file\n");
+    printf("3. Write to a file\n");
+    printf("4. Read from a file\n");
+    printf("5. Position the file offset \n");
+    printf("6. Create a directory\n");
+    printf("7. Erase a directory\n");
+    printf("8. Move to another directory\n");
+    printf("9. List the current directory\n");
+    printf("0. Quit\n");
     printf("----------------------------------------\n");
 }
 
 int main(int argc, char *argv[]) {
 
     FileSystem* fs = loadFS("myFATfs");
-    
-    //printMenu();
 
-    createFile(fs, "a");
-    //createFile(fs, "a");
-    createDir(fs, "1");
-    createFile(fs, "b");
-    listDir(fs);
-    changeDir(fs, "1");
-    createFile(fs, "1a");
-    createDir(fs, "2");
-    listDir(fs);
-    changeDir(fs, "2"); //NON VA
-    createFile(fs, "2a");
-    listDir(fs);
-    changeDir(fs, "..");
-    changeDir(fs, "..");
-    //createFile(fs, "e");
-    //createFile(fs, "f");
-    //createFile(fs, "g");
-    //createFile(fs, "h");
-    //createFile(fs, "i");
+//-------------------------8<----------------------------------
 
-    //eraseFile(fs, "a");
-    //eraseFile(fs, "a");
-    //changeDir(fs, "subroot");
-    //createFile(fs, "a");
-    //eraseFile(fs, "b");
-    //eraseFile(fs, "c");
-    //eraseFile(fs, "d");
-    //eraseFile(fs, "h");
-    //eraseFile(fs, "i");
+    int choice;
+    char name[100];
+    char buffer[MAX_DATA];
+    int pos;
+    int len;
+    int running = 1;
 
-    FileHandle* a_fh = openFile(fs, "a");
-    //FileHandle* a_fh = openFile(fs, "a");
-    //FileHandle* b_fh = openFile(fs, "b");
-    //FileHandle* c_fh = openFile(fs, "c");
-    //FileHandle* d_fh = openFile(fs, "d");
-    //seekFile(fs, d_fh, 1000);
-//
-    //writeFile(fs, a_fh, "In pitch dark I go walking in your landscape Broken branches Trip me as I speak Just 'cause you feel it Doesn't mean it's there Just 'cause you feel it Doesn't mean it's there There's always a siren Singing you to shipwreck (Don't reach out, don't reach out Don't reach out, don't reach out) Steer away from theserocks We'd be a walking disaster (Don't reach out, don't reach out Don't reach out, don't reach out) Just 'cause you feel it Doesn't mean it's there (Someone on your shoulder Someone on your shoulder) Just 'cause you feel it Doesn't mean it's there (Someone on your shoulder Someone on your shoulder) There there! Why so green and lonely? Lonely, lonely?", 666); 
-    //writeFile(fs, b_fh, "To where all you hear is water sounds, Lush as the wind upon a tree.", 68);
-    writeFile(fs, a_fh, "Prova", 5);
-    //writeFile(fs, a_fh, "To where all you hear is water sounds, Lush as the wind upon a tree.", 68);
-    //writeFile(fs, a_fh, "Prova", 5);
-    //writeFile(fs, a_fh, "fwefwfwefiwuhcownpwinwiwoiefh0weAAAAAAAA", 40);
-    //writeFile(fs, d_fh, "Aggiungo questa frase vediamo che succede", 41);
+    while (running) {
+        printMenu();
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+        getchar();
 
-    //eraseFileData(fs, "a");
-    //eraseFile(fs, "d");
-    //eraseFile(fs, "a");
-    //seekFile(fs, a_fh, 0);
-    //seekFile(fs, a_fh, 0);
+        switch (choice) {
+            case 1:
+                printf("Enter file name: ");
+                fgets(name, sizeof(name), stdin);
+                name[strcspn(name, "\n")] = 0;
+                createFile(fs, name);
+                break;
 
-    //char a_buf1[1000] = {0};
-    //readFile(fs, a_fh, a_buf1, 10);
-    //printf("Read: %s\n", a_buf1);
-    //char a_buf1[1000] = {0};
-    //readFile(fs, a_fh, a_buf1, 10);
-    //printf("Read: %s\n", a_buf1);
+            case 2:
+                printf("Do you want to erase only the file datas? [1/0] ");
+                scanf("%d", &choice);
+                getchar();
+                printf("Enter file name to erase: ");
+                fgets(name, sizeof(name), stdin);
+                name[strcspn(name, "\n")] = 0;
+                if(choice){
+                    eraseFileData(fs, name);
+                } else {
+                    eraseFile(fs, name, fs->currentDir);
+                }
+                break;
 
-    closeFile(fs, a_fh);
-    //closeFile(fs, a_fh);
-    //closeFile(fs, b_fh);
-    //closeFile(fs, c_fh);
-    //closeFile(fs, d_fh);
-    //createDir(fs, "subroot");
+            case 3:
+                printf("Enter file name to write to: ");
+                fgets(name, sizeof(name), stdin);
+                name[strcspn(name, "\n")] = 0;
+                printf("Enter the text to write: ");
+                fgets(buffer, sizeof(buffer), stdin);
+                buffer[strcspn(buffer, "\n")] = 0;
+                len = strlen(buffer);
+                printf("Enter the position where you want to write from: ");//
+                scanf("%d", &pos);//
+                getchar();//
+                FileHandle* fh = openFile(fs, name);
+                seekFile(fs, fh, pos);//
+                writeFile(fs, fh, buffer, len);
+                closeFile(fs, fh);
+                break;
+
+            case 4:
+                printf("Enter file name to read from: ");
+                fgets(name, sizeof(name), stdin);
+                name[strcspn(name, "\n")] = 0;
+                printf("Enter number of bytes to read: ");
+                scanf("%d", &len);
+                getchar();
+                FileHandle* fh_read = openFile(fs, name);
+                int readBlock = fh_read->currentFatBlockIndex;
+                DirEntry* readEntry = (DirEntry*)(&fs->FATfs->data[readBlock * BLOCK_SIZE]);
+                int dataSize = readEntry->size - BLOCK_SIZE;
+                char* readBuf = (char*)malloc(dataSize+1);
+                readFile(fs, fh_read, readBuf, len);
+                printf("Read data: %s\n", readBuf);
+                free(readBuf);
+                closeFile(fs, fh_read);
+                break;
+
+            case 5:
+                printf("Enter file name: ");
+                fgets(name, sizeof(name), stdin);
+                name[strcspn(name, "\n")] = 0;
+                printf("Enter the position to seek from: ");
+                scanf("%d", &pos);
+                getchar();
+                FileHandle* fh_seek = openFile(fs, name);
+                seekFile(fs, fh_seek, pos);
+                break;
+
+            case 6:
+                printf("Enter directory name to create: ");
+                fgets(name, sizeof(name), stdin);
+                name[strcspn(name, "\n")] = 0;
+                createDir(fs, name);
+                break;
+
+            case 7:
+                printf("Enter directory name to erase: ");
+                fgets(name, sizeof(name), stdin);
+                name[strcspn(name, "\n")] = 0;
+                eraseDir(fs, name, fs->currentDir);
+                break;
+
+            case 8:
+                printf("Enter directory where you want to move: ");
+                fgets(name, sizeof(name), stdin);
+                name[strcspn(name, "\n")] = 0;
+                changeDir(fs, name);
+                break;
+
+            case 9:
+                listDir(fs);
+                break;
+
+            case 0:
+                printf("Exiting the file system...\n");
+                printf("Exited successfully \n");
+                running = 0;
+                break;
+
+            default:
+                printf("Invalid choice. Please enter a number between 1 and 9, or 0 to quit.\n");
+                break;
+        }
+    }
+
+//-------------------------8<----------------------------------
 
     unloadFS(fs);
     return 0;
