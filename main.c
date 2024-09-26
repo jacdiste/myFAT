@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
 //-------------------------8<----------------------------------
 
     int choice;
-    char name[100];
+    char name[MAX_NAME_LENGHT];
     char buffer[MAX_DATA];
     int pos;
     int len;
