@@ -20,6 +20,7 @@ void printMenu() {
     printf("7. Erase a directory\n");
     printf("8. Move to another directory\n");
     printf("9. List the current directory\n");
+    printf("10. Print the FileSystem\n");
     printf("0. Quit\n");
     printf("----------------------------------------\n");
 }
@@ -31,7 +32,7 @@ int main(int argc, char *argv[]) {
 //-------------------------8<----------------------------------
 
     int choice;
-    char name[MAX_NAME_LENGHT];
+    char name[100];
     char buffer[MAX_DATA];
     int pos;
     int len;
@@ -77,6 +78,9 @@ int main(int argc, char *argv[]) {
                 scanf("%d", &pos);//
                 getchar();//
                 FileHandle* fh = openFile(fs, name);
+                if(fh == NULL){
+                    break;
+                }
                 seekFile(fs, fh, pos);//
                 writeFile(fs, fh, buffer, len);
                 closeFile(fs, fh);
@@ -87,15 +91,17 @@ int main(int argc, char *argv[]) {
                 fgets(name, sizeof(name), stdin);
                 name[strcspn(name, "\n")] = 0;
                 printf("Enter number of bytes to read: ");
-                scanf("%d", &len);
+                scanf("%d", &len); //se non inserisco un numero?
                 getchar();
                 FileHandle* fh_read = openFile(fs, name);
-                int readBlock = fh_read->currentFatBlockIndex;
-                DirEntry* readEntry = (DirEntry*)(&fs->FATfs->data[readBlock * BLOCK_SIZE]);
-                int dataSize = readEntry->size - BLOCK_SIZE;
-                char* readBuf = (char*)malloc(dataSize+1);
+                if(fh_read == NULL){
+                    break;
+                }
+                char* readBuf = (char*)malloc(MAX_DATA);
                 readFile(fs, fh_read, readBuf, len);
-                printf("Read data: %s\n", readBuf);
+                if(fh_read->currentDataBlockIndex != -1){
+                    printf("Read data: %s\n", readBuf);
+                }
                 free(readBuf);
                 closeFile(fs, fh_read);
                 break;
@@ -108,6 +114,9 @@ int main(int argc, char *argv[]) {
                 scanf("%d", &pos);
                 getchar();
                 FileHandle* fh_seek = openFile(fs, name);
+                if(fh_seek == NULL){
+                    break;
+                }
                 seekFile(fs, fh_seek, pos);
                 break;
 
@@ -136,6 +145,11 @@ int main(int argc, char *argv[]) {
                 listDir(fs);
                 break;
 
+            case 10:
+                DirEntry* root = (DirEntry*)(&fs->FATfs->data[0]);
+                printFs(fs, root, 0);
+                break;
+
             case 0:
                 printf("Exiting the file system...\n");
                 printf("Exited successfully \n");
@@ -143,7 +157,7 @@ int main(int argc, char *argv[]) {
                 break;
 
             default:
-                printf("Invalid choice. Please enter a number between 1 and 9, or 0 to quit.\n");
+                printf("Invalid choice. Please enter a number between 1 and 10, or 0 to quit.\n");
                 break;
         }
     }

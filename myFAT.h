@@ -46,6 +46,7 @@ void adjustSize(FileSystem* fs, DirEntry* parentDir, int targetSize, int type);
 FileHandle* openFile(FileSystem* fs, const char* name);
 void closeFile(FileSystem* fs, FileHandle* fh);
 void eraseFileData(FileSystem* fs, const char* name);
+void printFs(FileSystem* fs, DirEntry* dir, int level);
 
 // Requested functions
 void createFile(FileSystem* fs, const char* name);
