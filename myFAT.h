@@ -5,7 +5,7 @@
 #define MAX_ENTRIES 32
 #define BLOCKS_NUMBER 1024
 #define BLOCK_SIZE 40
-#define MAX_DATA 40880 //
+#define MAX_DATA 40880
 #define FREE -1
 #define EF -2
 

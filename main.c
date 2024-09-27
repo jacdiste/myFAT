@@ -74,14 +74,14 @@ int main(int argc, char *argv[]) {
                 fgets(buffer, sizeof(buffer), stdin);
                 buffer[strcspn(buffer, "\n")] = 0;
                 len = strlen(buffer);
-                printf("Enter the position where you want to write from: ");//
-                scanf("%d", &pos);//
-                getchar();//
+                printf("Enter the position where you want to write from: ");
+                scanf("%d", &pos);
+                getchar();
                 FileHandle* fh = openFile(fs, name);
                 if(fh == NULL){
                     break;
                 }
-                seekFile(fs, fh, pos);//
+                seekFile(fs, fh, pos);
                 writeFile(fs, fh, buffer, len);
                 closeFile(fs, fh);
                 break;
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
                 fgets(name, sizeof(name), stdin);
                 name[strcspn(name, "\n")] = 0;
                 printf("Enter number of bytes to read: ");
-                scanf("%d", &len); //se non inserisco un numero?
+                scanf("%d", &len);
                 getchar();
                 FileHandle* fh_read = openFile(fs, name);
                 if(fh_read == NULL){
