@@ -17,19 +17,8 @@ The system supports:
 
 - 🌲 Hierarchical structure: nested directories, absolute and relative paths
 - 💾 FAT management: block allocation and deallocation on a virtual disk
-- 📝 Interactive commands: `mkdir`, `touch`, `cd`, `ls`, `rm`, `write`, `read`, etc.
+- 📝 Interactive commands
 - 📦 Disk simulation: read/write to binary files simulating physical storage
-
-## 🧱 Project Structure
-
-```
-myFAT/
-├── src/               // C source files
-├── include/           // Header files
-├── disk/              // Simulated virtual disk
-├── Makefile           // Build automation
-└── README.md          // Project documentation
-```
 
 ## 🚀 Usage
 
@@ -45,7 +34,7 @@ make
 
 ### Run the file system
 ```bash
-./myfat
+./main
 ```
 
 After launching, a custom textual shell will appear where you can use commands to interact with the virtual file system.
